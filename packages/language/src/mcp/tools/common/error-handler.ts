@@ -66,7 +66,7 @@ export class FileReadError extends OmlError {
 export class PlaybookNotFoundError extends OmlError {
     constructor(searchLocation?: string) {
         super(
-            `Methodology playbook not found${searchLocation ? ` in ${searchLocation}` : ''}. Create a *_playbook.yaml file or specify playbookPath.`,
+            `Methodology SHACL shapes not found${searchLocation ? ` in ${searchLocation}` : ''}. Provide shapesPath or add a matching shape file under a shapes/ directory.`,
             ErrorCodes.PLAYBOOK_NOT_FOUND,
             { searchLocation },
         );
@@ -87,7 +87,7 @@ export class DescriptionParseError extends OmlError {
 export class PlaybookParseError extends OmlError {
     constructor(playbookPath: string, originalError: Error) {
         super(
-            `Failed to parse methodology playbook: ${playbookPath}`,
+            `Failed to parse methodology shapes/config: ${playbookPath}`,
             ErrorCodes.PLAYBOOK_PARSE_ERROR,
             { playbookPath },
             originalError,

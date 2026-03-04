@@ -6,11 +6,8 @@ import { ontologyTools } from './ontology/index.js';
 import { ruleTools } from './rules/index.js';
 import { validateOmlHandler, validateOmlTool, validateOmlMetadata } from './validate-tool.js';
 import { pendingTools } from './stubs/pending-tools.js';
-import { ensureImportsHandler, ensureImportsTool } from './methodology/ensure-imports.js';
-import { clarifyMethodologyPreferencesHandler, clarifyMethodologyPreferencesTool } from './methodology/clarify-methodology-preferences.js';
-import { extractMethodologyRulesHandler, extractMethodologyRulesTool } from './methodology/extract-methodology-rules.js';
 import { enforceMethodologyRulesHandler, enforceMethodologyRulesTool, enforceMethodologyRulesMetadata } from './methodology/enforce-methodology-rules.js';
-import { extractDescriptionSchemasHandler, extractDescriptionSchemasTool } from './methodology/extract-description-schemas.js';
+import { routeShapeIntentAliasTool, routeShapeIntentHandler, routeShapeIntentTool, routeShapeIntentMetadata } from './methodology/route-shape-intent.js';
 import { suggestOmlSymbolsTool, analyzeImpactTool, analyzeImpactHandler, suggestOmlSymbolsMetadata, analyzeImpactMetadata } from './query/index.js';
 import { suggestOmlSymbolsHandler } from './query/suggest-oml-symbols.js';
 import { preferencesTools } from './preferences/index.js';
@@ -24,11 +21,9 @@ const coreTools: ToolRegistration[] = [
     ...instanceTools,
     ...ontologyTools,
     ...ruleTools,
-    { tool: ensureImportsTool, handler: ensureImportsHandler },
-    { tool: clarifyMethodologyPreferencesTool, handler: clarifyMethodologyPreferencesHandler },
-    { tool: extractMethodologyRulesTool, handler: extractMethodologyRulesHandler },
     { tool: enforceMethodologyRulesTool, handler: enforceMethodologyRulesHandler, metadata: enforceMethodologyRulesMetadata },
-    { tool: extractDescriptionSchemasTool, handler: extractDescriptionSchemasHandler },
+    { tool: routeShapeIntentTool, handler: routeShapeIntentHandler, metadata: routeShapeIntentMetadata },
+    { tool: routeShapeIntentAliasTool, handler: routeShapeIntentHandler },
     ...preferencesTools,
 ];
 
@@ -87,20 +82,33 @@ export const phase3Tools: ToolRegistration[] = pickTools([
     'update_key',
     'update_equivalence',
     'update_restriction',
-    'ensure_imports',
-    'clarify_methodology_preferences',
-    'extract_methodology_rules',
     'enforce_methodology_rules',
-    'extract_description_schemas',
 ]);
 
 export const methodologyModeToolNames = new Set<string>([
-    'ensure_imports',
-    'clarify_methodology_preferences',
-    'extract_methodology_rules',
     'enforce_methodology_rules',
-    'extract_description_schemas',
 ]);
+
+export type WorkflowMode = 'basic' | 'methodology';
+
+const restrictedToolModes = new Map<string, Set<WorkflowMode>>([
+    ['enforce_methodology_rules', new Set<WorkflowMode>(['methodology'])],
+    ['route_shape_intent', new Set<WorkflowMode>(['methodology'])],
+    ['route-shape-intent', new Set<WorkflowMode>(['methodology'])],
+]);
+
+export function getAllowedWorkflowModesForTool(toolName: string): WorkflowMode[] | null {
+    const allowed = restrictedToolModes.get(toolName);
+    return allowed ? Array.from(allowed) : null;
+}
+
+export function isToolAvailableInWorkflowMode(toolName: string, workflowMode: WorkflowMode): boolean {
+    const allowed = restrictedToolModes.get(toolName);
+    if (!allowed) {
+        return true;
+    }
+    return allowed.has(workflowMode);
+}
 
 export const allTools: ToolRegistration[] = [
     ...coreTools,

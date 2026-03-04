@@ -18,6 +18,11 @@ export interface UserPreferences {
      * Recommended for weaker models to catch errors early.
      */
     safeMode?: boolean;
+    /**
+     * Strict methodology routing: when enabled in methodology mode, direct mutation tools are blocked.
+     * Models must use route_shape_intent for modeling changes.
+     */
+    strictMethodologyRouting?: boolean;
 }
 
 export interface FeedbackEntry {
@@ -35,6 +40,7 @@ class PreferencesState {
         workflowMode: 'basic',
         policies: [],
         safeMode: false,
+        strictMethodologyRouting: false,
     };
 
     private feedbackLog: FeedbackEntry[] = [];
@@ -68,7 +74,7 @@ class PreferencesState {
     }
 
     getContextPrompt(): string {
-        const { autonomy, workflowMode, policies, safeMode } = this.preferences;
+        const { autonomy, workflowMode, policies, safeMode, strictMethodologyRouting } = this.preferences;
         
         let prompt = `Current user preferences:\n`;
         prompt += `- Autonomy mode: ${autonomy}\n`;
@@ -76,7 +82,7 @@ class PreferencesState {
         if ((workflowMode ?? 'basic') === 'basic') {
             prompt += `  → Methodology-editing tools are hidden/blocked unless you switch to methodology mode.\n`;
         } else {
-            prompt += `  → Methodology-editing tools are enabled for this session.\n`;
+            prompt += `  → Methodology-aware tools are enabled (validation/enforcement plus guided modeling workflows).\n`;
         }
         
         if (autonomy === 'confirm') {
@@ -91,6 +97,11 @@ class PreferencesState {
         if (safeMode) {
             prompt += `  → Mutations will automatically run validate_oml to catch errors early.\n`;
             prompt += `  → Note: ensure_imports is NOT run automatically; call it explicitly if needed.\n`;
+        }
+
+        prompt += `- Strict methodology routing: ${strictMethodologyRouting ? 'enabled' : 'disabled'}\n`;
+        if (strictMethodologyRouting) {
+            prompt += `  → In methodology mode, direct mutation tools are blocked; use route_shape_intent for model edits.\n`;
         }
 
         if (policies && policies.length > 0) {

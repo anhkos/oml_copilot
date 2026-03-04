@@ -42,7 +42,7 @@ export const createConceptInstanceMetadata = {
     shortDescription: 'Create an instance of a concept in a description file',
     description: 'Creates a new concept instance (individual) in a description file with deterministic mutation; methodology orchestration is handled by skill workflow.',
     tags: ['instance-creation', 'description', 'ai-friendly', 'core'],
-    dependencies: ['extract_description_schemas', 'enforce_methodology_rules'],
+    dependencies: ['enforce_methodology_rules'],
     addedDate: '2024-01-01',
 };
 

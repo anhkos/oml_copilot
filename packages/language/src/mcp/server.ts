@@ -2,10 +2,48 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { allTools, methodologyModeToolNames } from './tools/index.js';
+import { allTools, getAllowedWorkflowModesForTool, isToolAvailableInWorkflowMode } from './tools/index.js';
 import { getWorkspaceRoot } from './tools/common.js';
 import { createToolRegistry, createPluginLifecycleManager, type Tool } from './tools/registry/index.js';
 import { preferencesState } from './tools/preferences/preferences-state.js';
+
+const methodologyDirectMutationTools = new Set<string>([
+    'create_aspect',
+    'create_concept',
+    'create_relation',
+    'create_relation_entity',
+    'create_scalar',
+    'create_scalar_property',
+    'create_annotation_property',
+    'delete_term',
+    'update_term',
+    'add_specialization',
+    'delete_specialization',
+    'add_restriction',
+    'update_restriction',
+    'delete_restriction',
+    'add_equivalence',
+    'update_equivalence',
+    'delete_equivalence',
+    'update_annotation',
+    'delete_annotation',
+    'update_key',
+    'delete_key',
+    'create_concept_instance',
+    'create_relation_instance',
+    'update_instance',
+    'delete_instance',
+    'update_property_value',
+    'delete_property_value',
+    'delete_type_assertion',
+    'create_ontology',
+    'add_import',
+    'delete_import',
+    'delete_ontology',
+    'create_rule',
+    'update_rule',
+    'delete_rule',
+]);
 
 /**
  * Initialize and register all tools with the registry
@@ -55,6 +93,11 @@ async function main() {
 
     // Register all tools dynamically from registry
     const tools = registry.getAllTools();
+    const methodologyTools = tools
+        .filter((entry) => entry.metadata?.layer === 'methodology')
+        .map((entry) => entry.tool.name)
+        .sort();
+    console.error(`[oml-mcp-server] Methodology tools exposed: ${methodologyTools.join(', ') || '(none)'}`);
     for (const entry of tools) {
         const { tool } = entry;
         
@@ -73,18 +116,42 @@ async function main() {
             tool.paramsSchema as any,
             async (...args: any[]) => {
                 try {
-                    const workflowMode = preferencesState.getPreferences().workflowMode ?? 'basic';
-                    if (methodologyModeToolNames.has(tool.name) && workflowMode !== 'methodology') {
+                    const preferences = preferencesState.getPreferences();
+                    const workflowMode = preferences.workflowMode ?? 'basic';
+                    if (!isToolAvailableInWorkflowMode(tool.name, workflowMode)) {
+                        const allowedModes = getAllowedWorkflowModesForTool(tool.name) ?? ['basic'];
+                        const preferredMode = allowedModes[0];
                         return {
                             content: [
                                 {
                                     type: 'text' as const,
                                     text:
                                         `Tool '${tool.name}' is unavailable in workflow mode '${workflowMode}'.\n` +
+                                        `Allowed workflow modes for this tool: ${allowedModes.join(', ')}\n` +
                                         `Switch modes first:\n` +
-                                        `set_preferences({ workflowMode: "methodology" })`,
+                                        `set_preferences({ workflowMode: "${preferredMode}" })`,
                                 },
                             ],
+                        };
+                    }
+
+                    if (
+                        workflowMode === 'methodology' &&
+                        preferences.strictMethodologyRouting &&
+                        methodologyDirectMutationTools.has(tool.name)
+                    ) {
+                        return {
+                            content: [
+                                {
+                                    type: 'text' as const,
+                                    text:
+                                        `Tool '${tool.name}' is blocked by strict methodology routing.\n` +
+                                        `Use route_shape_intent for methodology-aware model edits (e.g., intent: \"add stakeholder\").\n` +
+                                        `Disable strict routing if needed:\n` +
+                                        `set_preferences({ strictMethodologyRouting: false })`,
+                                },
+                            ],
+                            isError: true,
                         };
                     }
 

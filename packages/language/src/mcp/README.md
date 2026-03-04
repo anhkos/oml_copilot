@@ -16,7 +16,7 @@ The OML MCP Server is an AI-native tool that bridges OML ontologies and AI assis
 
 - **Specialized tools** for ontology engineering workflows
 - **Bidirectional relation handling** with direction preferences
-- **Methodology playbooks** for consistent modeling patterns (e.g., Sierra methodology)
+- **Methodology SHACL shapes** for consistent modeling patterns (e.g., Sierra methodology)
 - **Automatic import management** and symbol resolution across workspaces
 - **Comprehensive error handling** with remediation suggestions
 
@@ -88,7 +88,7 @@ MCP clients (like GitHub Copilot) have powerful tools available, but nudging the
 
 **Use explicit instructions in your prompts:**
 - "Use the OML MCP tools" (usually works best, can state this at the beginning of a chat)
-- "Call the enforce_methodology_rules tool to check this against the playbook"
+- "Call the enforce_methodology_rules tool to check this against SHACL shapes"
 - "Use create_concept_instance to add this to the ontology"
 
 **Set context in your system prompt / Copilot instructions:**
@@ -110,10 +110,10 @@ I will write a comprehensive guide on prompting strategies and Copilot instructi
 
 ### Workflow Modes (Dynamic Tool Exposure)
 
-The server supports two workflow modes to reduce tool overload and keep prompts focused:
+The server supports workflow modes to reduce tool overload and keep prompts focused:
 
 - **`basic` (default):** core OML modeling tools (terms, axioms, instances, ontology, rules, validation/query)
-- **`methodology`:** enables methodology-editing tools for playbook creation/enforcement workflows
+- **`methodology`:** enables methodology-aware workflows (SHACL validation/enforcement + shape-driven coding)
 
 Set mode with `set_preferences`:
 
@@ -126,7 +126,7 @@ Set mode with `set_preferences`:
 }
 ```
 
-Enable methodology mode when you are explicitly editing methodology/playbook assets:
+Enable methodology mode when you are explicitly editing methodology/shape assets:
 
 ```json
 {
@@ -137,7 +137,25 @@ Enable methodology mode when you are explicitly editing methodology/playbook ass
 }
 ```
 
-If a methodology tool is called while in `basic` mode, the server returns a clear message asking you to switch modes first.
+Note: when switching to `workflowMode: "methodology"`, `strictMethodologyRouting` is auto-enabled by default (unless you explicitly set it). This helps smaller models route edits through `route_shape_intent` instead of direct mutation tools.
+
+Legacy note: `workflowMode: "methodology_coding"` is accepted as a backward-compatible alias and normalized to `"methodology"`.
+
+For smaller models, enable strict routing so methodology edits always go through the shape router:
+
+```json
+{
+  "tool": "set_preferences",
+  "params": {
+    "workflowMode": "methodology",
+    "strictMethodologyRouting": true
+  }
+}
+```
+
+When strict routing is enabled, direct mutation tools (like `create_concept`, `create_concept_instance`, `update_instance`) are blocked in methodology mode and the model is guided to use `route_shape_intent`.
+
+If a gated tool is called while in the wrong mode, the server returns a clear message listing allowed modes and a suggested `set_preferences` call.
 
 ## Tool Categories
 
@@ -221,167 +239,79 @@ Tools for managing SWRL-style rules.
 
 ### Methodology Tools
 
-Higher-level tools for common workflows.
+SHACL enforcement tool for methodology workflows.
 
 > These are gated by workflow mode and require `workflowMode: "methodology"`.
 
-**Hybrid recommendation:** keep parser/deterministic tools in MCP, and prefer agent skill orchestration for playbook-driven routing/preparation/preflight logic.
+**Current scope:** methodology mode exposes SHACL enforcement and shape-driven intent routing.
 
 | Tool | Description |
 |------|-------------|
-| `ensure_imports` | Ensures all required imports are present |
-| `add_to_bundle` | Adds ontologies to a bundle |
-| `smart_create_vocabulary` | Creates a vocabulary with automatic imports |
-| `generate_vocabulary_bundle` | Generates a bundle for vocabularies |
-| `clarify_methodology_preferences` | Interactively extract relations and collect voice/direction preferences |
-| `extract_methodology_rules` | Generates a "Playbook" from vocabulary files for consistent modeling |
-| `enforce_methodology_rules` | Validates descriptions against a methodology playbook |
+| `enforce_methodology_rules` | Validates descriptions against SHACL shapes |
+| `route_shape_intent` | Routes natural-language intents (e.g., "add stakeholder") to shape-driven generic modeling plans; execution is optional |
 
 
-#### Understanding the Methodology Playbook System
+#### SHACL Methodology Enforcement
 
-The playbook tools enable **methodology-driven modeling** - the ability to define and enforce consistent modeling patterns across your entire ontology. This is essential for large teams working on complex systems.
+Use SHACL shapes as the single source of methodology constraints.
 
-**The Three-Step Workflow:**
+**Recommended workflow:**
 
-**Step 1: Clarify Preferences** (`clarify_methodology_preferences`)
-- Extracts all bidirectional relations from your vocabulary files
-- Presents them to you with clear active/passive voice alternatives
-- Collects your preference for each relation pair
-- Returns a structured preference object
+1. Create or maintain shape files per description (or shared shape sets).
+2. Point a description to a shape file with an annotation (for example `dc:relation "shapes/system-description.ttl"`) or pass `shapesPath` explicitly.
+3. Run `enforce_methodology_rules` to validate and review violations.
 
-Example: For the relation `requirement:expresses` ↔ `requirement:isExpressedBy`:
-- **Active voice** (forward): `Stakeholder expresses Requirement`
-- **Passive voice** (reverse): `Requirement isExpressedBy Stakeholder`
-
-You choose which direction your team prefers, based on domain semantics.
-
-**Step 2: Extract Methodology Rules** (`extract_methodology_rules`)
-- Reads your vocabulary files (concepts, relations, constraints)
-- Applies your voice/direction preferences
-- Generates a machine-readable YAML playbook that codifies your methodology
-- The playbook captures:
-  - Bidirectional relation rules (forward name, reverse name, preferred direction)
-  - Relation entity rules (reified relations with complex structure)
-  - Concept rules (key axioms, required properties)
-
-**Step 3: Enforce Rules During Modeling** (`enforce_methodology_rules`)
-- Validates description files against your playbook
-- Detects violations (e.g., using wrong relation direction)
-- Generates detailed violation reports with:
-  - Exact line number and instance name
-  - Explanation of the violation
-  - Suggested corrections
-- Can optionally auto-transform code to canonical form
-
-**Complete Example Workflow:**
-
-```bash
-# 1. Extract relations and collect preferences
-clarify_methodology_preferences(
-  vocabularyFiles: [
-    "sierra/base.oml",
-    "sierra/requirement.oml", 
-    "sierra/stakeholder.oml"
-  ]
-)
-# Output: List of relations with voice options
-
-# User response: Prefer passive voice
-
-# 2. Generate playbook
-extract_methodology_rules(
-  vocabularyFiles: [
-    "sierra/base.oml",
-    "sierra/requirement.oml", 
-    "sierra/stakeholder.oml"
-  ],
-  methodologyName: "Sierra",
-  preferences: {
-    voicePreference: "passive",
-    specificChoices: {
-      "expresses": "reverse",
-      "refines": "reverse",
-      "allocates": "forward"
-    }
-  },
-  outputPath: "sierra/methodology_playbook.yaml"
-)
-# Output: sierra/methodology_playbook.yaml (YAML file with all rules)
-
-# 3. Enforce during description authoring
-enforce_methodology_rules(
-  playbookPath: "sierra/methodology_playbook.yaml",
-  descriptionPath: "my-system-requirements.oml",
-  mode: "validate"
-)
-# Output: Validation results, violations, and suggested corrections
-```
-
-**Example Playbook Structure:**
-
-```yaml
-metadata:
-  methodology: "Sierra"
-  version: "1.0"
-  voicePreference: "passive"
-  generatedFrom:
-    - "sierra/base.oml"
-    - "sierra/requirement.oml"
-
-relationRules:
-  - forwardRelation: "expresses"
-    reverseRelation: "isExpressedBy"
-    owningConcept: "Requirement"
-    preferredDirection: "reverse"
-    explanation: "Requirements are expressed by stakeholders (passive voice)"
-    
-  - forwardRelation: "refines"
-    reverseRelation: "isRefinedBy"
-    owningConcept: "Requirement"
-    preferredDirection: "reverse"
-    explanation: "Requirements are refined by other requirements (passive voice)"
-    
-  - forwardRelation: "allocates"
-    reverseRelation: "isAllocatedBy"
-    owningConcept: "Actor"
-    preferredDirection: "forward"
-    explanation: "Actors actively allocate requirements (active voice)"
-```
-
-**Example Violation Report:**
-
-```
-⚠️ Found 1 violation of the Sierra methodology
-
-WRONG_RELATION_DIRECTION
-❌ expresses ↔ isExpressedBy
-On line 12, instance SafetyOfficer uses: requirement:expresses R2
-Should use: requirement:isExpressedBy instead
-
-Suggested Correction:
-Remove from SafetyOfficer:
-    requirement:expresses R2
-    
-Add to R2:
-    requirement:isExpressedBy SafetyOfficer
-```
-
-**Why This Matters:**
-
-- **Consistency**: Ensures all models follow the same patterns
+**SHACL Starter Template:**
 - **Understandability**: Teams know exactly which direction to use for each relation
 - **Automation**: AI assistants can automatically enforce rules and suggest corrections
-- **Evolution**: As methodology evolves, update the playbook and re-validate all descriptions
-- **Documentation**: The playbook serves as executable methodology documentation
+- **Evolution**: As methodology evolves, update shapes and re-validate all descriptions
+- **Documentation**: Shapes serve as executable methodology documentation
 
 **Technical Details:**
 
-The playbook system works by:
-1. Building a bidirectional lookup map for all relations (forward → rule, reverse → rule)
-2. Parsing each description file to extract property assertions
-3. For each assertion, checking if it uses the preferred direction
-4. Reporting violations with exact locations and suggesting corrections
+The SHACL system works by:
+1. Converting description assertions into RDF triples
+2. Loading shapes from explicit path, annotation, or shape-file conventions
+3. Validating the RDF graph against SHACL Core constraints
+4. Reporting violations with focus node, path, and best-effort source mapping
+
+**SHACL Starter Template:**
+
+- Starter shapes file: [packages/language/src/mcp/tools/methodology/examples/methodology-shapes.template.ttl](packages/language/src/mcp/tools/methodology/examples/methodology-shapes.template.ttl)
+- Copy it into your methodology workspace, replace namespace IRIs, and add one `sh:NodeShape` per concept whose relation direction you want to enforce.
+- Direction enforcement pattern: keep preferred property shape, add opposite property shape with `sh:maxCount 0`.
+
+**Per-description SHACL file structure (recommended):**
+
+- Keep SHACL files in a dedicated `shapes/` folder.
+- Name shapes by description file base name, e.g. `system-description.oml` → `shapes/system-description.ttl` (also supports `-shapes.ttl` and `.shapes.ttl`).
+- Optionally annotate the description to point to a shape path explicitly.
+
+Example description annotation (Dublin Core):
+
+```oml
+@dc:relation "shapes/system-description.ttl"
+description <https://example.com/system-description#> as systemDesc uses <http://purl.org/dc/elements/1.1/> as dc {
+  ...
+}
+```
+
+Supported annotation property local names are: `shaclShapes`, `shapesPath`, `shaclShape`, `shape`.
+For Dublin Core annotations, `dc:relation`, `dc:source`, and `dc:references` are also recognized.
+
+**Run SHACL enforcement:**
+
+```json
+{
+  "tool": "enforce_methodology_rules",
+  "params": {
+    "shapesPath": "sierra/methodology-shapes.ttl",
+    "descriptionPath": "sierra/system-description.oml"
+  }
+}
+```
+
+Note: the integrated validator supports SHACL Core constraints; SHACL-SPARQL constraints are not supported.
 
 See the methodology tools section in [IDEAS.md](./IDEAS.md) for implementation notes.
 

@@ -37,8 +37,10 @@
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.24.3",
+        "@zazuko/env-node": "^3.0.0",
         "js-yaml": "^4.1.0",
         "langium": "~4.1.0",
+        "rdf-validate-shacl": "^0.6.5",
         "zod": "^3.22.4",
         "vscode-jsonrpc": "^8.2.0",
         "vscode-languageserver": "^9.0.1"

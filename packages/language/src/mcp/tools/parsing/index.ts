@@ -4,7 +4,7 @@
  * Centralized exports for all parsing-related modules and utilities.
  */
 
-export type { PropertyAssertion, InstanceInfo, ImportPrefixMap, ParsedDescription, ParsedPlaybook, ParsingConfig, ResolvedImports } from './types.js';
+export type { PropertyAssertion, InstanceInfo, ImportPrefixMap, ParsedDescription, ParsingConfig, ResolvedImports } from './types.js';
 
 // Import resolver functions
 export {

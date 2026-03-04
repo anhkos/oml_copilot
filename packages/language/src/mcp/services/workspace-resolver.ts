@@ -166,7 +166,7 @@ export function detectIndentation(content: string): string {
 
 /**
  * Find a file by name, searching up the directory tree.
- * Useful for finding playbook files, config files, etc.
+ * Useful for finding methodology shape files, config files, etc.
  * 
  * @param startPath Starting directory or file
  * @param fileName Name of file to find

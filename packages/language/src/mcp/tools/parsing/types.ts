@@ -5,8 +5,6 @@
  * Ensures type safety across parsing, validation, and reporting modules.
  */
 
-import type { MethodologyPlaybook } from '../methodology/playbook-types.js';
-
 /**
  * A single property assertion extracted from an instance
  * Represents a property value on an instance in a description
@@ -58,18 +56,6 @@ export interface ParsedDescription {
     sourceCode: string;
     /** Map of import aliases to canonical prefixes */
     importPrefixMap: ImportPrefixMap;
-}
-
-/**
- * Result of parsing a playbook YAML file
- */
-export interface ParsedPlaybook {
-    /** Playbook data structure */
-    playbook: MethodologyPlaybook;
-    /** Raw YAML content */
-    sourceYaml: string;
-    /** File path playbook was loaded from */
-    filePath: string;
 }
 
 /**
