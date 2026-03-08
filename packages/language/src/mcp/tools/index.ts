@@ -6,8 +6,7 @@ import { ontologyTools } from './ontology/index.js';
 import { ruleTools } from './rules/index.js';
 import { validateOmlHandler, validateOmlTool, validateOmlMetadata } from './validate-tool.js';
 import { pendingTools } from './stubs/pending-tools.js';
-import { enforceMethodologyRulesHandler, enforceMethodologyRulesTool, enforceMethodologyRulesMetadata } from './methodology/enforce-methodology-rules.js';
-import { routeShapeIntentAliasTool, routeShapeIntentHandler, routeShapeIntentTool, routeShapeIntentMetadata } from './methodology/route-shape-intent.js';
+
 import { suggestOmlSymbolsTool, analyzeImpactTool, analyzeImpactHandler, suggestOmlSymbolsMetadata, analyzeImpactMetadata } from './query/index.js';
 import { suggestOmlSymbolsHandler } from './query/suggest-oml-symbols.js';
 import { preferencesTools } from './preferences/index.js';
@@ -21,9 +20,6 @@ const coreTools: ToolRegistration[] = [
     ...instanceTools,
     ...ontologyTools,
     ...ruleTools,
-    { tool: enforceMethodologyRulesTool, handler: enforceMethodologyRulesHandler, metadata: enforceMethodologyRulesMetadata },
-    { tool: routeShapeIntentTool, handler: routeShapeIntentHandler, metadata: routeShapeIntentMetadata },
-    { tool: routeShapeIntentAliasTool, handler: routeShapeIntentHandler },
     ...preferencesTools,
 ];
 
@@ -82,32 +78,16 @@ export const phase3Tools: ToolRegistration[] = pickTools([
     'update_key',
     'update_equivalence',
     'update_restriction',
-    'enforce_methodology_rules',
-]);
-
-export const methodologyModeToolNames = new Set<string>([
-    'enforce_methodology_rules',
 ]);
 
 export type WorkflowMode = 'basic' | 'methodology';
 
-const restrictedToolModes = new Map<string, Set<WorkflowMode>>([
-    ['enforce_methodology_rules', new Set<WorkflowMode>(['methodology'])],
-    ['route_shape_intent', new Set<WorkflowMode>(['methodology'])],
-    ['route-shape-intent', new Set<WorkflowMode>(['methodology'])],
-]);
-
-export function getAllowedWorkflowModesForTool(toolName: string): WorkflowMode[] | null {
-    const allowed = restrictedToolModes.get(toolName);
-    return allowed ? Array.from(allowed) : null;
+export function getAllowedWorkflowModesForTool(_toolName: string): WorkflowMode[] | null {
+    return null;
 }
 
-export function isToolAvailableInWorkflowMode(toolName: string, workflowMode: WorkflowMode): boolean {
-    const allowed = restrictedToolModes.get(toolName);
-    if (!allowed) {
-        return true;
-    }
-    return allowed.has(workflowMode);
+export function isToolAvailableInWorkflowMode(_toolName: string, _workflowMode: WorkflowMode): boolean {
+    return true;
 }
 
 export const allTools: ToolRegistration[] = [

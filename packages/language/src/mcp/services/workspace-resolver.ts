@@ -13,13 +13,62 @@ import { URI } from 'langium';
  * Get the workspace root directory.
  * 
  * Priority:
- * 1. OML_WORKSPACE_ROOT environment variable (set by VS Code MCP integration)
- * 2. Current working directory as fallback
+ * 1. --workspace CLI argument (passed via MCP server args)
+ * 2. OML_WORKSPACE_ROOT environment variable
+ * 3. Current working directory as fallback
  * 
  * @returns The workspace root path (absolute)
  */
 export function getWorkspaceRoot(): string {
-    return process.env.OML_WORKSPACE_ROOT || process.cwd();
+    const args = process.argv;
+
+    // Support both "--workspace <path>" and "--workspace=<path>"
+    const wsIdx = args.indexOf('--workspace');
+    if (wsIdx !== -1 && wsIdx + 1 < args.length) {
+        const value = sanitizeWorkspacePath(args[wsIdx + 1]);
+        if (isUsableWorkspaceRoot(value)) {
+            return value;
+        }
+    }
+
+    const wsEqualsArg = args.find(arg => arg.startsWith('--workspace='));
+    if (wsEqualsArg) {
+        const value = sanitizeWorkspacePath(wsEqualsArg.slice('--workspace='.length));
+        if (isUsableWorkspaceRoot(value)) {
+            return value;
+        }
+    }
+
+    const envRoot = sanitizeWorkspacePath(process.env.OML_WORKSPACE_ROOT);
+    if (isUsableWorkspaceRoot(envRoot)) {
+        return envRoot;
+    }
+
+    // Some hosts set one of these even when cwd points to the home directory
+    const pwdRoot = sanitizeWorkspacePath(process.env.PWD);
+    if (isUsableWorkspaceRoot(pwdRoot)) {
+        return pwdRoot;
+    }
+
+    const initCwdRoot = sanitizeWorkspacePath(process.env.INIT_CWD);
+    if (isUsableWorkspaceRoot(initCwdRoot)) {
+        return initCwdRoot;
+    }
+
+    return process.cwd();
+}
+
+function sanitizeWorkspacePath(input?: string): string | undefined {
+    if (!input) {
+        return undefined;
+    }
+
+    const trimmed = input.trim().replace(/^['\"]|['\"]$/g, '');
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function isUsableWorkspaceRoot(input?: string): input is string {
+    return Boolean(input && input.length > 1 && fs.existsSync(input));
 }
 
 /**
