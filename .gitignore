@@ -21,4 +21,7 @@ packages/language/src/mcp/IDEAS.md
 packages/language/src/mcp/vision.md
 packages/language/src/mcp/docs/
 
+# experiments 
+evals/
+
 .DS_Store

@@ -17,7 +17,7 @@ import { resolveSymbolName, createResolutionErrorResult, type OmlSymbolType } fr
 import { ensureImportsHandler } from '../methodology/ensure-imports.js';
 
 const paramsSchema = {
-    ontology: z.string().describe('File path or file:// URI to the target vocabulary'),
+    ontology: z.string().describe('ABSOLUTE path to an EXISTING vocabulary file. If the file does not exist yet, call create_ontology(kind="vocabulary") first.'),
     name: z.string().describe('Relation name to create'),
     sources: z.array(z.string()).optional().describe('Source entities. Simple or qualified names are auto-resolved; imports are added automatically. Use suggest_oml_symbols only if you need to discover names when resolution fails.'),
     targets: z.array(z.string()).optional().describe('Target entities. Simple or qualified names are auto-resolved; imports are added automatically. Use suggest_oml_symbols only if you need to discover names when resolution fails.'),

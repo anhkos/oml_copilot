@@ -153,6 +153,58 @@ export type AnyTerm =
     | AnnotationProperty
     | UnreifiedRelation;
 
+/**
+ * Custom error class for when a required ontology file does not exist.
+ * Includes actionable guidance for the model to create the ontology first.
+ */
+export class OntologyNotFoundError extends Error {
+    constructor(
+        public readonly filePath: string,
+        public readonly expectedKind: 'vocabulary' | 'description' | 'vocabulary or description'
+    ) {
+        const kindHint =
+            expectedKind === 'vocabulary or description'
+                ? 'vocabulary or description'
+                : expectedKind;
+        super(
+            `ONTOLOGY NOT FOUND: ${filePath}\n\n` +
+            `The target ${kindHint} file does not exist yet.\n\n` +
+            `Create it first using create_ontology, then retry your operation.\n` +
+            `Example:\n` +
+            `  create_ontology(filePath=\"${filePath}\", kind=\"${expectedKind === 'vocabulary or description' ? 'vocabulary' : expectedKind}\", namespace=\"...\", prefix=\"...\")`
+        );
+        this.name = 'OntologyNotFoundError';
+    }
+}
+
+/**
+ * Custom error class for when a file exists but is not the expected ontology type.
+ */
+export class WrongOntologyTypeError extends Error {
+    constructor(
+        public readonly filePath: string,
+        public readonly expectedKind: 'vocabulary' | 'description' | 'vocabulary or description',
+        public readonly actualType: string
+    ) {
+        const expectedText = expectedKind === 'vocabulary or description'
+            ? 'a vocabulary or description'
+            : `a ${expectedKind}`;
+
+        const actionHint = expectedKind === 'vocabulary'
+            ? 'Terms (concepts, aspects, relations, properties, scalars) can only be created in vocabulary files. If you intended to create instances, use description tools like create_concept_instance.'
+            : expectedKind === 'description'
+                ? 'Instances can only be created in description files.'
+                : 'Use a valid ontology file (vocabulary or description).';
+
+        super(
+            `WRONG ONTOLOGY TYPE: ${filePath}\n\n` +
+            `Expected ${expectedText}, but found \"${actualType}\".\n\n` +
+            `${actionHint}`
+        );
+        this.name = 'WrongOntologyTypeError';
+    }
+}
+
 export function pathToFileUri(filePath: string): string {
     if (filePath.startsWith('file://')) {
         return filePath;
@@ -178,7 +230,7 @@ export async function loadVocabularyDocument(ontology: string) {
     const filePath = fileUriToPath(fileUri);
 
     if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found at ${filePath}`);
+        throw new OntologyNotFoundError(filePath, 'vocabulary');
     }
 
     const services = getOmlServices();
@@ -198,7 +250,8 @@ export async function loadVocabularyDocument(ontology: string) {
     
     if (!root || !isVocabulary(root)) {
         console.error(`[DEBUG] Vocabulary load failed: root=$type=${root?.$type}, isVocab=${root ? isVocabulary(root) : false}`);
-        throw new Error(`The target ontology "${filePath}" is not a vocabulary. Use loadAnyOntologyDocument() for descriptions or bundles.`);
+        const actualType = root?.$type || 'unknown (parse failed)';
+        throw new WrongOntologyTypeError(filePath, 'vocabulary', actualType);
     }
 
     const text = fs.readFileSync(filePath, 'utf-8');
@@ -217,7 +270,7 @@ export async function loadAnyOntologyDocument(ontology: string) {
     const filePath = fileUriToPath(fileUri);
 
     if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found at ${filePath}`);
+        throw new OntologyNotFoundError(filePath, 'vocabulary or description');
     }
 
     const services = getOmlServices();
@@ -245,7 +298,8 @@ export async function loadAnyOntologyDocument(ontology: string) {
     
     if (!root || (!isVocab && !isDesc)) {
         console.error(`[DEBUG] AnyOntology load failed: root=$type=${root?.$type}, isVocab=${isVocab}, isDesc=${isDesc}`);
-        throw new Error('The target file is not a vocabulary or description.');
+        const actualType = root?.$type || 'unknown (parse failed)';
+        throw new WrongOntologyTypeError(filePath, 'vocabulary or description', actualType);
     }
 
     const text = fs.readFileSync(filePath, 'utf-8');

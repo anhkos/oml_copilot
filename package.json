@@ -11,7 +11,15 @@
         "build:clean": "npm run clean && npm run build",
         "langium:generate": "npm run --workspace packages/language langium:generate",
         "langium:watch": "npm run --workspace packages/language langium:watch",
-        "test": "npm run --workspace packages/language test"
+        "test": "npm run --workspace packages/language test",
+        "exp:manifest": "node experiments/scripts/generate-manifest.mjs",
+        "exp:seed-tasks": "node experiments/scripts/generate-task-scaffold.mjs",
+        "exp:seed-tasks:budget": "node experiments/scripts/generate-budget-tasks.mjs",
+        "exp:manifest:budget": "node experiments/scripts/generate-manifest.mjs experiments/config/models.json experiments/tasks/tasks-budget-96.json 1 experiments/runs/manifest-budget-96.jsonl",
+        "exp:run": "node experiments/scripts/run-manifest.mjs",
+        "exp:run:budget": "node experiments/scripts/run-manifest.mjs experiments/runs/manifest-budget-96.jsonl experiments/config/models.json experiments/tasks/tasks-budget-96.json experiments/runs/raw experiments/config/budget-150.json",
+        "exp:score": "node experiments/scripts/score-runs.mjs",
+        "exp:aggregate": "node experiments/scripts/aggregate-scores.mjs"
     },
     "devDependencies": {
         "@types/node": "~20.17.48",

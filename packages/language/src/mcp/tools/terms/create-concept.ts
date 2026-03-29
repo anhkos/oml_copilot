@@ -17,7 +17,7 @@ import { resolveSymbolName, createResolutionErrorResult, type OmlSymbolType } fr
 import { ensureImportsHandler } from '../methodology/ensure-imports.js';
 
 const paramsSchema = {
-    ontology: z.string().describe('File path to a VOCABULARY file (not description). Concepts can only be defined in vocabularies.'),
+    ontology: z.string().describe('ABSOLUTE path to an EXISTING vocabulary file. If the file does not exist yet, call create_ontology(kind="vocabulary") first.'),
     name: z.string().describe('Concept name to create (must start with capital letter, e.g., "Stakeholder", "Requirement")'),
     keys: z.array(z.array(z.string())).optional().describe('Optional key property groups'),
     instanceEnumeration: z.array(z.string()).optional().describe('Optional instance enumeration list'),

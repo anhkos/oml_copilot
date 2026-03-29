@@ -16,7 +16,7 @@ import { preferencesState } from '../preferences/preferences-state.js';
 import { ensureImportsHandler } from '../methodology/ensure-imports.js';
 
 const paramsSchema = {
-    ontology: z.string().describe('File path or file:// URI to the target vocabulary'),
+    ontology: z.string().describe('ABSOLUTE path to an EXISTING vocabulary file. If the file does not exist yet, call create_ontology(kind="vocabulary") first.'),
     name: z.string().describe('Scalar name to create'),
     literalEnumeration: z.array(literalParamSchema).optional().describe('Optional literal enumeration (oneOf)'),
     annotations: z.array(annotationParamSchema).optional(),

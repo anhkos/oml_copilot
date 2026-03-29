@@ -10,6 +10,7 @@ import { pendingTools } from './stubs/pending-tools.js';
 import { suggestOmlSymbolsTool, analyzeImpactTool, analyzeImpactHandler, suggestOmlSymbolsMetadata, analyzeImpactMetadata } from './query/index.js';
 import { suggestOmlSymbolsHandler } from './query/suggest-oml-symbols.js';
 import { preferencesTools } from './preferences/index.js';
+import { crudTools } from './crud/index.js';
 
 const coreTools: ToolRegistration[] = [
     { tool: validateOmlTool, handler: validateOmlHandler, metadata: validateOmlMetadata },
@@ -21,6 +22,7 @@ const coreTools: ToolRegistration[] = [
     ...ontologyTools,
     ...ruleTools,
     ...preferencesTools,
+    ...crudTools,
 ];
 
 const coreToolsByName = new Map(coreTools.map((t) => [t.tool.name, t]));
@@ -80,13 +82,55 @@ export const phase3Tools: ToolRegistration[] = pickTools([
     'update_restriction',
 ]);
 
-export type WorkflowMode = 'basic' | 'methodology';
+export type WorkflowMode = 'basic' | 'methodology' | 'shape_modeling';
 
-export function getAllowedWorkflowModesForTool(_toolName: string): WorkflowMode[] | null {
+const shapeWorkflowPrimaryTools = new Set<string>([
+    'add_instance',
+    'update_instance_with_shape',
+    'delete_instance_with_shape',
+]);
+
+const alwaysAllowedTools = new Set<string>([
+    'set_preferences',
+    'get_preferences',
+    'log_feedback',
+    'validate_oml',
+    'analyze_impact',
+    'suggest_oml_symbols',
+]);
+
+export function getAllowedWorkflowModesForTool(toolName: string): WorkflowMode[] | null {
+    if (alwaysAllowedTools.has(toolName)) {
+        return ['basic', 'methodology', 'shape_modeling'];
+    }
+
+    if (shapeWorkflowPrimaryTools.has(toolName)) {
+        return ['shape_modeling'];
+    }
+
+    if (toolName.startsWith('create_') || toolName.startsWith('update_') || toolName.startsWith('delete_') || toolName.startsWith('add_')) {
+        return ['basic', 'methodology'];
+    }
+
     return null;
 }
 
-export function isToolAvailableInWorkflowMode(_toolName: string, _workflowMode: WorkflowMode): boolean {
+export function isToolAvailableInWorkflowMode(toolName: string, workflowMode: WorkflowMode): boolean {
+    // Always-allowed tools are available in every mode
+    if (alwaysAllowedTools.has(toolName)) {
+        return true;
+    }
+
+    if (workflowMode === 'shape_modeling') {
+        // In shape modeling mode, only shape tools (and always-allowed above) are exposed
+        return shapeWorkflowPrimaryTools.has(toolName);
+    }
+
+    // In basic/methodology modes, shape tools are not available
+    if (shapeWorkflowPrimaryTools.has(toolName)) {
+        return false;
+    }
+
     return true;
 }
 

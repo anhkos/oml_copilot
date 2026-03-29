@@ -4,7 +4,7 @@
  */
 
 export type AutonomyMode = 'confirm' | 'batch' | 'auto';
-export type WorkflowMode = 'basic' | 'methodology';
+export type WorkflowMode = 'basic' | 'methodology' | 'shape_modeling';
 
 export interface UserPreferences {
     autonomy: AutonomyMode;
@@ -34,10 +34,18 @@ export interface FeedbackEntry {
     preferences: UserPreferences;
 }
 
+function getDefaultWorkflowMode(): WorkflowMode {
+    const fromEnv = (process.env.OML_DEFAULT_WORKFLOW_MODE || '').trim();
+    if (fromEnv === 'basic' || fromEnv === 'methodology' || fromEnv === 'shape_modeling') {
+        return fromEnv;
+    }
+    return 'basic';
+}
+
 class PreferencesState {
     private preferences: UserPreferences = {
         autonomy: 'confirm',
-        workflowMode: 'basic',
+        workflowMode: getDefaultWorkflowMode(),
         policies: [],
         safeMode: false,
         strictMethodologyRouting: false,
@@ -81,6 +89,10 @@ class PreferencesState {
         prompt += `- Workflow mode: ${workflowMode ?? 'basic'}\n`;
         if ((workflowMode ?? 'basic') === 'basic') {
             prompt += `  → Methodology-editing tools are hidden/blocked unless you switch to methodology mode.\n`;
+        } else if ((workflowMode ?? 'basic') === 'shape_modeling') {
+            prompt += `  → Shape-aware description workflow is enforced.\n`;
+            prompt += `  → Use add_instance/update_instance_with_shape/delete_instance_with_shape for SHACL-aware mutations.\n`;
+            prompt += `  → Ask only for missing required SHACL properties before mutating files.\n`;
         } else {
             prompt += `  → Methodology-aware tools are enabled (validation/enforcement plus guided modeling workflows).\n`;
         }

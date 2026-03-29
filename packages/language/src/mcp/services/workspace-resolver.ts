@@ -15,7 +15,8 @@ import { URI } from 'langium';
  * Priority:
  * 1. --workspace CLI argument (passed via MCP server args)
  * 2. OML_WORKSPACE_ROOT environment variable
- * 3. Current working directory as fallback
+ * 3. Common workspace environment variables from host integrations
+ * 4. Current working directory as fallback
  * 
  * @returns The workspace root path (absolute)
  */
@@ -42,6 +43,19 @@ export function getWorkspaceRoot(): string {
     const envRoot = sanitizeWorkspacePath(process.env.OML_WORKSPACE_ROOT);
     if (isUsableWorkspaceRoot(envRoot)) {
         return envRoot;
+    }
+
+    const hostWorkspaceVars = [
+        process.env.MCP_WORKSPACE_ROOT,
+        process.env.VSCODE_WORKSPACE_ROOT,
+        process.env.WORKSPACE_ROOT,
+        process.env.WORKSPACE_FOLDER,
+    ];
+    for (const candidate of hostWorkspaceVars) {
+        const root = sanitizeWorkspacePath(candidate);
+        if (isUsableWorkspaceRoot(root)) {
+            return root;
+        }
     }
 
     // Some hosts set one of these even when cwd points to the home directory
