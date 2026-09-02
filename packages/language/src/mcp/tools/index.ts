@@ -7,15 +7,18 @@ import { ruleTools } from './rules/index.js';
 import { validateOmlHandler, validateOmlTool, validateOmlMetadata } from './validate-tool.js';
 import { pendingTools } from './stubs/pending-tools.js';
 
-import { suggestOmlSymbolsTool, analyzeImpactTool, analyzeImpactHandler, suggestOmlSymbolsMetadata, analyzeImpactMetadata } from './query/index.js';
+import { suggestOmlSymbolsTool, analyzeImpactTool, analyzeImpactHandler, suggestOmlSymbolsMetadata, analyzeImpactMetadata, compareDescriptionsTool, compareDescriptionsHandler, compareDescriptionsMetadata } from './query/index.js';
 import { suggestOmlSymbolsHandler } from './query/suggest-oml-symbols.js';
 import { preferencesTools } from './preferences/index.js';
 import { crudTools } from './crud/index.js';
+import { checkTraceabilityTool, checkTraceabilityHandler, checkTraceabilityMetadata } from './methodology/check-traceability.js';
 
 const coreTools: ToolRegistration[] = [
     { tool: validateOmlTool, handler: validateOmlHandler, metadata: validateOmlMetadata },
     { tool: suggestOmlSymbolsTool, handler: suggestOmlSymbolsHandler, metadata: suggestOmlSymbolsMetadata },
     { tool: analyzeImpactTool, handler: analyzeImpactHandler, metadata: analyzeImpactMetadata },
+    { tool: compareDescriptionsTool, handler: compareDescriptionsHandler, metadata: compareDescriptionsMetadata },
+    { tool: checkTraceabilityTool, handler: checkTraceabilityHandler, metadata: checkTraceabilityMetadata },
     ...termTools,
     ...axiomTools,
     ...instanceTools,
@@ -97,6 +100,11 @@ const alwaysAllowedTools = new Set<string>([
     'validate_oml',
     'analyze_impact',
     'suggest_oml_symbols',
+    'compare_descriptions',
+]);
+
+const methodologyOnlyTools = new Set<string>([
+    'check_traceability',
 ]);
 
 export function getAllowedWorkflowModesForTool(toolName: string): WorkflowMode[] | null {
@@ -129,6 +137,11 @@ export function isToolAvailableInWorkflowMode(toolName: string, workflowMode: Wo
     // In basic/methodology modes, shape tools are not available
     if (shapeWorkflowPrimaryTools.has(toolName)) {
         return false;
+    }
+
+    // Methodology-only tools are only available in methodology mode
+    if (methodologyOnlyTools.has(toolName)) {
+        return workflowMode === 'methodology';
     }
 
     return true;

@@ -31,3 +31,9 @@ export {
     type ExtractedScalarProperty,
     type VocabularyProperties,
 } from './parse-vocabulary.js';
+
+export {
+    compareDescriptionsTool,
+    compareDescriptionsMetadata,
+    compareDescriptionsHandler,
+} from './compare-descriptions.js';
